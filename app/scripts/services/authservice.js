@@ -65,6 +65,46 @@ angular.module('tokenExampleApp')
         }
         $rootScope.buffer = [];
       },
+      requestTokenByService: function(service) {
+        var deferred = $q.defer();
+        // var config = $rootScope.buffer.slice(-1)[0].config;
+        $.ajax({
+          dataType : "jsonp",
+          crossDomain: true,
+          // type: "POST",
+          // contentType: "application/json",
+          url: $rootScope[service].tokenService + "/request?callback=?",
+          // url: "https://authtest.it.usf.edu/AuthTransferService/webtoken/request?callback=?",
+          // data: { "service": "https://dev.it.usf.edu/~james/ExampleApp/" },
+          data: { "service": $rootScope[service].appId },
+          // jsonpCallback: 'JSON_CALLBACK',
+          // jsonp: 'callback',
+          //beforeSend: function (XMLHttpRequest, settings) {
+          //  XMLHttpRequest.setRequestHeader("Content-Type", "application/json");
+          //  XMLHttpRequest.setRequestHeader("Accept", "application/json");
+          //  // XMLHttpRequest.setRequestHeader("X-Auth-Token", "123ABC");
+          //},
+          success: function(response, textStatus, jqXHR) {
+            $log.info(textStatus);
+            $log.info(response);
+            // $rootScope[$rootScope.buffer.slice(-1)[0].config.params.service].token = response.token;
+            $rootScope.$apply( function() { 
+              deferred.resolve(response); 
+            });
+          }
+        }).fail(function (jqXHR,textStatus, errorThrown) {
+          $log.info("Failed URL: " + $rootScope[service].tokenService + "/request?callback=?");
+          $log.info(textStatus);
+          $log.info(errorThrown);
+          $log.info(jqXHR.responseJSON);
+          $log.info(jqXHR.responseText);
+          $rootScope.$apply( function() { 
+            deferred.resolve(jqXHR.responseJSON); 
+          });
+        });
+        //Returning the promise object
+        return deferred.promise;
+      },
       requestToken: function() {
         var deferred = $q.defer();
         // var config = $rootScope.buffer.slice(-1)[0].config;
@@ -174,6 +214,9 @@ angular.module('tokenExampleApp')
         //Returning the promise object
         return deferred.promise;
       },
+      readyToRetrieveToken: function(service) {
+        return ('appId' in $rootScope[service] && 'tokenService' in $rootScope[service] && !('token' in $rootScope[service]));
+      },
       getMergedTokenHeaders: function(service,headers) {
         if ('appId' in $rootScope[service] && 'tokenService' in $rootScope[service] && !('token' in $rootScope[service])) {
           this.requestToken().then(function(data) {
@@ -197,6 +240,7 @@ angular.module('tokenExampleApp')
       get401response: function() {
         var config = $rootScope.buffer.slice(-1)[0].config;
         var deferred = $q.defer();
+        
         $.ajax({
           dataType : "jsonp",
           type: "POST",
@@ -208,6 +252,9 @@ angular.module('tokenExampleApp')
             XMLHttpRequest.setRequestHeader("Content-Type", "application/json");
             XMLHttpRequest.setRequestHeader("Accept", "application/json");
             // XMLHttpRequest.setRequestHeader("X-Auth-Token", "123ABC");
+            if (!($rootScope[config.params.service].token === undefined || $rootScope[config.params.service].token === null)) {
+              XMLHttpRequest.setRequestHeader('X-Auth-Token', $rootScope[config.params.service].token);
+            }
           },
           success: function(response, textStatus, jqXHR) {
             $window.alert(JSON.stringify(response));
@@ -325,7 +372,7 @@ angular.module('tokenExampleApp')
           $log.info(rejection); // Contains the data about the error on the response.
           var deferred = $q.defer();
           // if (rejection.status === 401 && !rejection.config.ignoreAuthModule) {
-          alert(JSON.stringify(rejection.config));
+          // alert(JSON.stringify(rejection.config));
           if (rejection.status === 0 && !rejection.config.ignoreAuthModule) {
             // $window.alert(rejection.config.url);
             //var url = rejection.config.url;
