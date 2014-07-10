@@ -4,6 +4,7 @@ angular.module('tokenExampleApp')
   .factory('authService', ['$rootScope','$injector','storage','$window','$q','$log','$cookieStore', function ($rootScope,$injector,storage,$window,$q,$log,$cookieStore) {
     /** Service initialized later because of circular dependency problem. */
     var $http;
+    var $resource;
     var service = {
       /**
        * Initializes local storage for use by the authService
